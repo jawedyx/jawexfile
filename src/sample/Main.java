@@ -18,7 +18,7 @@ public class Main extends Application {
         primaryStage.setTitle("JawexFile");
 
 
-        primaryStage.setScene(new Scene(root, 850, 530));
+        primaryStage.setScene(new Scene(root, 690, 530));
         primaryStage.show();
 
 

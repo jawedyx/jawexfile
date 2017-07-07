@@ -3,13 +3,13 @@ package sample;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.Event;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Node;
-import javafx.scene.control.Alert;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeView;
+import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.MouseEvent;
@@ -31,11 +31,16 @@ public class Controller implements Initializable{
 
     private ArrayList<String> str_roots;
 
+    private ObservableList<String> ofiles = FXCollections.observableArrayList();
+
     @FXML
     TreeView<String> treeView;
 
     @FXML
     HBox parent;
+
+    @FXML
+    ListView<String> listView;
 
 
 
@@ -82,6 +87,8 @@ public class Controller implements Initializable{
             }
 
 
+            ofiles.clear();
+
             File file = new File(item.getValue());
 
             File[] fileList = file.listFiles();
@@ -89,7 +96,10 @@ public class Controller implements Initializable{
                 for (File f: fileList  ) {
 
                     if(f.isFile() ){
-                        //System.out.println(f.getName());
+                        System.out.println(f.getName());
+
+                        ofiles.add(f.getName());
+
                     }
 
                     if(f.isDirectory() && f.canRead() && f.canWrite()){
@@ -117,6 +127,49 @@ public class Controller implements Initializable{
                     }
 
                 }
+
+                listView.setCellFactory(var -> new ListCell<String>() {
+                    private ImageView imageView = new ImageView(new Image(getClass().getResourceAsStream("img/unknown_file.png")));
+                    @Override
+                    public void updateItem(String name, boolean empty) {
+                        super.updateItem(name, empty);
+                        if (empty) {
+                            setText(null);
+                            setGraphic(null);
+                        } else {
+
+
+                            int formatPosition = name.lastIndexOf(".");
+
+                            if(formatPosition != -1){
+                                String format = name.substring(formatPosition);
+
+                                switch (format){
+                                    case ".java" : imageView.setImage(new Image(getClass().getResourceAsStream("img/java.png")));
+                                        break;
+                                    case ".doc" : imageView.setImage(new Image(getClass().getResourceAsStream("img/doc.png")));
+                                        break;
+                                    case ".txt" : imageView.setImage(new Image(getClass().getResourceAsStream("img/txt.png")));
+                                        break;
+                                    case ".zip" : imageView.setImage(new Image(getClass().getResourceAsStream("img/zip.png")));
+                                        break;
+                                    case ".mp3" : imageView.setImage(new Image(getClass().getResourceAsStream("img/mp3.png")));
+                                        break;
+                                    case ".rar" : imageView.setImage(new Image(getClass().getResourceAsStream("img/rar.png")));
+                                        break;
+                                    case ".jpg" : imageView.setImage(new Image(getClass().getResourceAsStream("img/jpg.png")));
+                                        break;
+                                }
+                            }
+
+                            setText(name);
+                            setGraphic(imageView);
+                        }
+                    }
+                });
+
+                listView.setItems(ofiles);
+
             }catch (Exception ex){
                 Alert alert = new Alert(Alert.AlertType.ERROR);
                 alert.setTitle("Ошибка");
