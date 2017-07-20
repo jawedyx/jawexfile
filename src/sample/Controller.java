@@ -135,9 +135,9 @@ public class Controller implements Initializable{
                         loadFilesAndFolders();
 
                         if(item.getValue().matches("\\w:\\\\")){ //Если выбран диск
-                            treeView.getSelectionModel().getSelectedItem().setGraphic(new ImageView(new Image(getClass().getResourceAsStream("img/disc.png"))));
+                            item.setGraphic(new ImageView(new Image(getClass().getResourceAsStream("img/disc.png"))));
                         }else{
-                            treeView.getSelectionModel().getSelectedItem().setGraphic(new ImageView(new Image(getClass().getResourceAsStream("img/folder.png"))));
+                            item.setGraphic(new ImageView(new Image(getClass().getResourceAsStream("img/open_folder.png"))));
                         }
                     } catch (Exception ignore) {}
                 }
