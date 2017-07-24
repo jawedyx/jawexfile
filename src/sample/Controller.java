@@ -18,8 +18,10 @@ import javafx.scene.layout.HBox;
 
 import javax.swing.*;
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.TimeUnit;
 
@@ -30,13 +32,13 @@ public class Controller implements Initializable{
     private final Image discIcon =  new Image(getClass().getResourceAsStream("img/disc.png"));
 
     private final Image folderIcon =  new Image(getClass().getResourceAsStream("img/folder.png"));
-    private final Node openFolderIcon =  new ImageView(new Image(getClass().getResourceAsStream("img/open_folder.png")));
 
     private ArrayList<String> str_roots;
 
     private ObservableList<String> ofiles = FXCollections.observableArrayList();
 
-    private ContextMenu context = new ContextMenu();
+    private ContextMenu treeContext = new ContextMenu();
+    private ContextMenu listContext = new ContextMenu();
 
 
     @FXML
@@ -77,10 +79,11 @@ public class Controller implements Initializable{
         treeView.setRoot(rootItem);
 
 
-        context.getItems().addAll(new MenuItem("Новый каталог"), new MenuItem("Ленивая загрузка"));
+        treeContext.getItems().addAll(new MenuItem("Новый каталог"), new MenuItem("Ленивая загрузка"));
+        listContext.getItems().addAll(new MenuItem("Создать файл"), new MenuItem("Переименовать"), new MenuItem("Удалить"));
 
         //Новый каталог
-        context.getItems().get(0).setOnAction(event -> {
+        treeContext.getItems().get(0).setOnAction(event -> {
 
             File f = new File(treeView.getSelectionModel().getSelectedItem().getValue() + "\\New Folder");
 
@@ -92,14 +95,115 @@ public class Controller implements Initializable{
         });
 
         //Ленивая загрузка
-        context.getItems().get(1).setOnAction(event -> {
+        treeContext.getItems().get(1).setOnAction(event -> {
             treeView.getSelectionModel().getSelectedItem().setGraphic(new ImageView(new Image(getClass().getResourceAsStream("img/lazyload.gif"))));
             (new IconHandler()).execute();
 
         });
-        treeView.setContextMenu(context);
+        treeView.setContextMenu(treeContext);
+
+        //Функции проводника
+
+        //Добавить
+        listContext.getItems().get(0).setOnAction(event -> {
+
+            TextInputDialog dialog = new TextInputDialog("file");
+            dialog.setTitle("Создание файла");
+            dialog.setHeaderText("Какое имя задать файлу?");
+            dialog.setContentText("Имя файла:");
 
 
+            Optional<String> result = dialog.showAndWait();
+            if (result.isPresent() && !result.get().equals("")){
+
+                String file = treeView.getSelectionModel().getSelectedItem().getValue();
+
+                //Формирование пути
+                file = (str_roots.contains(file)) ? file + result.get(): file + "\\" + result.get();
+
+
+                File newFile = new File(file);
+
+                try
+                {
+                    if(newFile.createNewFile()){
+
+                        loadFilesAndFolders(); // реинициализация списка
+
+                    } else throw new IOException();
+                }
+                catch(IOException ex){
+
+                    alertThrower(Alert.AlertType.ERROR, "Ошибка", "Файл не может быть создан", "Проверьте наличие одноименного файла в директории.");
+                    ex.printStackTrace();
+
+                }
+
+            }
+
+        });
+
+        //Переименование
+        listContext.getItems().get(1).setOnAction(event -> {
+
+            String fileName = listView.getSelectionModel().getSelectedItem();
+
+            TextInputDialog dialog = new TextInputDialog(fileName);
+            dialog.setTitle("Переименование файла");
+            dialog.setHeaderText("Какое имя задать файлу?");
+            dialog.setContentText("Новое имя файла:");
+
+
+            Optional<String> result = dialog.showAndWait();
+
+            if(result.isPresent()){
+                String file = treeView.getSelectionModel().getSelectedItem().getValue();
+
+
+
+                file = (str_roots.contains(file)) ? file + fileName: file + "\\" + fileName;
+                File fileToRename = new File(file);
+
+                String resultName = (str_roots.contains(file)) ? fileToRename.getParent() +  result.get(): fileToRename.getParent() + "\\" +  result.get();
+                File newName = new File(resultName);
+
+                if(fileToRename.renameTo(newName)){
+
+                    loadFilesAndFolders();
+
+                }else{
+                    alertThrower(Alert.AlertType.ERROR, "Ошибка", "Ошибка переименования файла", "Файл не может быть переименован. Вероятно, в папке уже есть файл с таким именем.");
+                }
+
+            }
+
+        });
+
+
+        //Удаление
+        listContext.getItems().get(2).setOnAction(event -> {
+            String file = treeView.getSelectionModel().getSelectedItem().getValue();
+            String fileName = listView.getSelectionModel().getSelectedItem();
+
+            file = (str_roots.contains(file)) ? file + fileName: file + "\\" + fileName;
+
+            File fileToRemove = new File(file);
+
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("Подтвердите действие");
+            alert.setHeaderText("Данная операция безвозвратно удалит выбранный файл");
+            alert.setContentText("Вы действительно согласны?");
+
+            Optional<ButtonType> result = alert.showAndWait();
+
+            if (result.isPresent() && result.get() == ButtonType.OK){
+                fileToRemove.delete();
+                loadFilesAndFolders();
+            }
+
+        });
+
+        listView.setContextMenu(listContext);
 
     }
 
@@ -220,7 +324,9 @@ public class Controller implements Initializable{
 
             //Установка иконок файлам
             listView.setCellFactory(var -> new ListCell<String>() {
+
                 private ImageView imageView = new ImageView(new Image(getClass().getResourceAsStream("img/unknown_file.png")));
+
                 @Override
                 public void updateItem(String name, boolean empty) {
                     super.updateItem(name, empty);
@@ -262,15 +368,20 @@ public class Controller implements Initializable{
             listView.setItems(ofiles);
 
         }catch (Exception ex){
-            Alert alert = new Alert(Alert.AlertType.ERROR);
-            alert.setTitle("Ошибка");
-            alert.setHeaderText("Произошла ошибка");
-            alert.setContentText("Убедитесь в доступности диска или папки.");
 
-            alert.showAndWait();
-
+            alertThrower(Alert.AlertType.ERROR, "Ошибка", "Произошла ошибка", "Убедитесь в доступности диска или папки.");
             ex.printStackTrace();
+
         }
+    }
+
+    private void alertThrower(Alert.AlertType type, String title, String headerText, String cTest){
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(headerText);
+        alert.setContentText(cTest);
+
+        alert.showAndWait();
     }
 
 
